@@ -11,10 +11,18 @@
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{url}
+\usepackage{hyperref}
 \usepackage{multirow}
 \usepackage{microtype}
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, fit}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  citecolor=blue!60!black,
+  urlcolor=blue!70!black,
+  pdfborder={0 0 0}
+}
 
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -48,36 +56,50 @@ Recent research has aggressively extended this paradigm toward long-horizon, aut
 \begin{figure}[t]
 \centering
 \begin{tikzpicture}[
-    node distance=0.85cm and 0.9cm,
-    box/.style={rectangle, draw=blue!70!black, fill=blue!5, rounded corners=3pt, thick, align=center, font=\footnotesize, minimum height=0.65cm, inner sep=3pt},
-    actionbox/.style={rectangle, draw=green!60!black, fill=green!5, rounded corners=3pt, thick, align=center, font=\footnotesize, minimum height=0.65cm, inner sep=3pt},
-    warnbox/.style={rectangle, draw=red!70!black, fill=red!8, rounded corners=3pt, thick, dashed, align=center, font=\footnotesize\bfseries, text=red!70!black, inner sep=4pt},
-    arrow/.style={-{Stealth[scale=0.9]}, thick, draw=gray!80!black},
-    warnarrow/.style={-{Stealth[scale=0.9]}, thick, draw=red!70!black}
+    node distance=0.75cm and 0.80cm,
+    box/.style={rectangle, draw=blue!70!black, fill=blue!5, rounded corners=3pt,
+                thick, align=center, font=\footnotesize,
+                minimum height=0.6cm, minimum width=1.55cm, inner sep=3pt},
+    actionbox/.style={rectangle, draw=green!60!black, fill=green!5, rounded corners=3pt,
+                      thick, align=center, font=\footnotesize,
+                      minimum height=0.6cm, minimum width=1.55cm, inner sep=3pt},
+    warnbox/.style={rectangle, draw=red!70!black, fill=red!5, rounded corners=3pt,
+                    thick, dashed, align=center, font=\scriptsize\bfseries,
+                    text=red!70!black, minimum width=3.4cm, inner sep=4pt},
+    arrow/.style={-{Stealth[scale=0.85]}, thick, draw=gray!70!black},
+    warnarrow/.style={-{Stealth[scale=0.85]}, thick, draw=red!70!black}
 ]
-    % Nodes
-    \node[box] (goal) {User Goal /\\ Intent $g$};
-    \node[box, right=of goal] (plan) {Planning \&\\ Decomposition};
-    \node[box, right=of plan] (select) {Tool \& Argument\\ Generation ($a_t$)};
-    \node[actionbox, below=of select] (exec) {External Tool\\ Execution ($T_t$)};
-    \node[actionbox, left=of exec] (obs) {Observation /\\ Result ($o_{t+1}$)};
-    \node[box, left=of obs] (state) {State \& Context\\ Update ($s_{t+1}$)};
-    \node[warnbox, below=0.65cm of obs] (err) {Latent Error / Corrupted Observation\\ Injected into Ground Truth Context};
+  % --- Top row: left to right ---
+  \node[box] (goal)   {User Goal /\\ Intent $};
+  \node[box, right=of goal]   (plan)   {Planning \&\\ Decomposition};
+  \node[box, right=of plan]   (select) {Tool \& Arg\\ Gen.\ ($)};
+  % --- Bottom row: right to left (mirror of top) ---
+  \node[actionbox, below=of select] (exec)  {External Tool\\ Execution ($)};
+  \node[actionbox, below=of plan]   (obs)   {Observation /\\ Result ({t+1}$)};
+  \node[box,       below=of goal]   (state) {State \& Context\\ Update ({t+1}$)};
+  % --- Error warning box ---
+  \node[warnbox, below=0.55cm of obs] (err)
+    {Corrupted Obs.\ / Latent Error\\
+     $\hookrightarrow$ Enters State as Fact};
 
-    % Paths
-    \draw[arrow] (goal) -- (plan);
-    \draw[arrow] (plan) -- (select);
-    \draw[arrow] (select) -- (exec);
-    \draw[arrow] (exec) -- (obs);
-    \draw[arrow] (obs) -- (state);
-    \draw[arrow] (state) |- ($(state.west)+(-0.3,0)$) |- (plan.west);
-    \draw[arrow] (state) -- (plan);
-    
-    % Error cycle
-    \draw[warnarrow] (exec) |- (err.east);
-    \draw[warnarrow] (err.west) -| (state.south);
+  % === Main execution arrows (clockwise loop) ===
+  \draw[arrow] (goal)   -- (plan);       % Step 1
+  \draw[arrow] (plan)   -- (select);     % Step 2
+  \draw[arrow] (select) -- (exec);       % Step 3
+  \draw[arrow] (exec)   -- (obs);        % Step 4
+  \draw[arrow] (obs)    -- (state);      % Step 5
+  % Step 6: state feeds back to plan (single clean path, left side)
+  \draw[arrow] (state.west) -- ++(-0.4,0) |- (goal.west);
+
+  % === Error propagation path (red) ===
+  % Corrupted obs branches downward from obs.south
+  \draw[warnarrow] (obs.south)  -- (err.north);
+  % Error feeds directly into state from the west
+  \draw[warnarrow] (err.west)   -| (state.south);
 \end{tikzpicture}
-\caption{Execution workflow of a chained tool-calling agent. In the absence of a human checkpoint, an erroneous or adversarial intermediate observation is incorporated directly into the operational state $s_{t+1}$, initiating an uncorrected failure cascade.}
+\caption{Chained tool-calling agent execution loop (clockwise). Without a human
+checkpoint, a corrupted or adversarial observation {t+1}$ (red path) is absorbed
+into state {t+1}$ and re-enters planning, initiating an uncorrected failure cascade.}
 \label{fig:workflow}
 \end{figure}
 
@@ -118,33 +140,55 @@ P(\text{all correct}) = p^n
 \begin{figure}[t]
 \centering
 \begin{tikzpicture}[
-    level distance=1.3cm,
-    level 1/.style={sibling distance=3.9cm},
-    level 2/.style={sibling distance=1.95cm},
-    every node/.style={rectangle, draw=blue!70!black, fill=blue!5, rounded corners=2pt, font=\scriptsize, align=center, inner sep=3pt, thick},
-    root/.style={fill=blue!15, font=\footnotesize\bfseries, draw=blue!90!black}
+  boxstyle/.style={rectangle, draw=blue!70!black, fill=blue!5,
+                   rounded corners=3pt, thick, font=\scriptsize,
+                   align=center, inner sep=4pt, text width=2.0cm},
+  leafstyle/.style={rectangle, draw=blue!50!black, fill=white,
+                    rounded corners=2pt, thick, font=\tiny,
+                    align=center, inner sep=3pt, text width=1.9cm},
+  arrow/.style={-{Stealth[scale=0.7]}, thick, draw=blue!60!black}
 ]
-\node[root] {Chained-Agent\\ Failure Taxonomy}
-    child {node {1. Planning \&\\ Decomposition}
-        child {node {Goal Misinterpretation\\ Premature Commitment\\ Plan Drift}}
-    }
-    child {node {2. Tool Selection\\ \& Arguments}
-        child {node {Argument Hallucination\\ Schema Misunderstanding\\ Over-Privilege}}
-    }
-    child {node {3. State, Memory\\ \& Context}
-        child {node {Desynchronization\\ Context Degradation\\ Memory Contamination}}
-    }
-    child {node {4. Execution \&\\ Environment}
-        child {node {Partial Execution\\ Stale / Silent Faults\\ Fault Conflation}}
-    }
-    child {node {5. Verification \&\\ Recovery}
-        child {node {False Verification\\ Verification Blindness\\ Recovery Divergence}}
-    }
-    child {node {6. Security \&\\ Governance}
-        child {node {Prompt Injection\\ Confused Deputy\\ Privilege Escalation}}
-    };
+  % Root
+  \node[rectangle, draw=blue!90!black, fill=blue!18, rounded corners=4pt,
+        thick, font=\footnotesize\bfseries, align=center, inner sep=5pt]
+    (root) at (3.3, 4.2) {Chained-Agent Failure Taxonomy};
+
+  % Row 1 — Classes 1,2,3
+  \node[boxstyle] (c1) at (0.0, 2.8) {\textbf{1.} Planning \&\\ Decomposition};
+  \node[boxstyle] (c2) at (3.3, 2.8) {\textbf{2.} Tool Selection\\ \& Arguments};
+  \node[boxstyle] (c3) at (6.6, 2.8) {\textbf{3.} State, Memory\\ \& Context};
+
+  % Row 2 — Classes 4,5,6
+  \node[boxstyle] (c4) at (0.0, 1.0) {\textbf{4.} Execution \&\\ Environment};
+  \node[boxstyle] (c5) at (3.3, 1.0) {\textbf{5.} Verification\\ \& Recovery};
+  \node[boxstyle] (c6) at (6.6, 1.0) {\textbf{6.} Security \&\\ Governance};
+
+  % Leaf nodes row 1
+  \node[leafstyle] (l1) at (0.0,-0.1) {Goal Misinterpret.\\ Premature Commit.\\ Plan Drift};
+  \node[leafstyle] (l2) at (3.3,-0.1) {Arg.\ Hallucination\\ Schema Mismatch\\ Over-Privilege};
+  \node[leafstyle] (l3) at (6.6,-0.1) {Desynchronization\\ Context Dilution\\ Memory Poison};
+  \node[leafstyle] (l4) at (0.0,-1.4) {Partial Execution\\ Stale Results\\ Fault Conflation};
+  \node[leafstyle] (l5) at (3.3,-1.4) {False Verification\\ Verif.\ Blindness\\ Recovery Drift};
+  \node[leafstyle] (l6) at (6.6,-1.4) {Prompt Injection\\ Confused Deputy\\ Policy Bypass};
+
+  % Arrows from root to row-1 classes
+  \draw[arrow] (root.south) -- (c1.north);
+  \draw[arrow] (root.south) -- (c2.north);
+  \draw[arrow] (root.south) -- (c3.north);
+  \draw[arrow] (root.south) -- (c4.north);
+  \draw[arrow] (root.south) -- (c5.north);
+  \draw[arrow] (root.south) -- (c6.north);
+
+  % Arrows from class boxes to leaves
+  \draw[arrow] (c1.south) -- (l1.north);
+  \draw[arrow] (c2.south) -- (l2.north);
+  \draw[arrow] (c3.south) -- (l3.north);
+  \draw[arrow] (c4.south) -- (l4.north);
+  \draw[arrow] (c5.south) -- (l5.north);
+  \draw[arrow] (c6.south) -- (l6.north);
 \end{tikzpicture}
-\caption{Hierarchical taxonomy of failure modes in chained tool-calling agents operating without human checkpoints across six analytical dimensions.}
+\caption{Six-class failure taxonomy for chained tool-calling agents without human
+checkpoints. Each class captures a distinct failure domain with its key failure modes.}
 \label{fig:taxonomy_tree}
 \end{figure}
 
@@ -379,48 +423,78 @@ As recorded in Table~\ref{tab:empirical_results}:
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}
-\begin{scope}
-  % Axes
-  \draw[thick,->] (0,0) -- (5.5,0) node[right,font=\scriptsize] {Chain Length $n$};
-  \draw[thick,->] (0,0) -- (0,4.2) node[above,font=\scriptsize] {Task Success Rate (\%)};
-  
-  % Y-axis ticks
+  % === Axes ===
+  \draw[thick,->] (0,0) -- (5.8,0)
+    node[right, font=\scriptsize] {Chain Length $};
+  \draw[thick,->] (0,0) -- (0,4.5)
+    node[above, font=\scriptsize] {Task Success Rate (\%)};
+
+  % === Y-axis ticks and gridlines ===
   \foreach \y/\lab in {0/0, 0.8/20, 1.6/40, 2.4/60, 3.2/80, 4.0/100}{
-    \draw (0,\y) -- (-0.1,\y);
-    \node[left,font=\tiny] at (-0.1,\y) {\lab};
+    \draw[gray!30] (0,\y) -- (5.6,\y);
+    \draw (0,\y) -- (-0.12,\y);
+    \node[left, font=\tiny] at (-0.12,\y) {\lab};
   }
-  
-  % X-axis ticks: n = 5,10,15,20,25,30,40,50
-  \foreach \x/\lab in {0.2/5,0.9/10,1.6/15,2.3/20,3.0/25,3.7/30,4.4/40,5.1/50}{
-    \draw (\x,0) -- (\x,-0.1);
-    \node[below,font=\tiny] at (\x,-0.1) {\lab};
+
+  % === X-axis ticks: n=5,10,15,20,25,30,40,50 ===
+  % x positions spaced so n=50 lands at x=5.25 (well within axis end of 5.8)
+  \foreach \x/\lab in {0.3/5, 0.9/10, 1.5/15, 2.1/20, 2.7/25, 3.3/30, 4.2/40, 5.25/50}{
+    \draw (\x,0) -- (\x,-0.12);
+    \node[below, font=\tiny] at (\x,-0.12) {\lab};
   }
-  
-  % NONE line: 75.7, 63.2, 48.4, 38.1, 27.1, 19.6, 13.5, 8.5
-  \draw[red!70!black, thick, dashed]
-    (0.2, 3.028) -- (0.9, 2.528) -- (1.6, 1.936) -- (2.3, 1.524) --
-    (3.0, 1.084) -- (3.7, 0.784) -- (4.4, 0.54) -- (5.1, 0.34);
-  
-  % FIXED-5 line: 95.2, 95.1, 96.3, 95.0, 94.5, 94.6, 94.7, 95.5
+
+  % === Data: scale = success_pct * 0.04 ===
+  % NONE:    75.7, 63.2, 48.4, 38.1, 27.1, 19.6, 13.5,  8.5
+  % FIXED-5: 95.2, 95.1, 96.3, 95.0, 94.5, 94.6, 94.7, 95.5
+  % ADAPTIVE:83.5, 82.8, 80.0, 81.3, 80.0, 77.6, 78.1, 79.0
+
+  % --- Unsupervised (red dashed) ---
+  \draw[red!75!black, thick, dashed]
+    (0.30, 3.028) -- (0.90, 2.528) -- (1.50, 1.936) -- (2.10, 1.524) --
+    (2.70, 1.084) -- (3.30, 0.784) -- (4.20, 0.540) -- (5.25, 0.340);
+  \foreach \x/\y in {0.30/3.028, 0.90/2.528, 1.50/1.936, 2.10/1.524,
+                      2.70/1.084, 3.30/0.784, 4.20/0.540, 5.25/0.340}{
+    \fill[red!75!black] (\x,\y) circle (1.5pt);
+  }
+
+  % --- Fixed-5 (blue solid) ---
   \draw[blue!70!black, thick]
-    (0.2, 3.808) -- (0.9, 3.804) -- (1.6, 3.852) -- (2.3, 3.8) --
-    (3.0, 3.78) -- (3.7, 3.784) -- (4.4, 3.788) -- (5.1, 3.82);
-  
-  % ADAPTIVE line: 83.5, 82.8, 80.0, 81.3, 80.0, 77.6, 78.1, 79.0
-  \draw[green!60!black, thick, dash dot]
-    (0.2, 3.34) -- (0.9, 3.312) -- (1.6, 3.2) -- (2.3, 3.252) --
-    (3.0, 3.2) -- (3.7, 3.104) -- (4.4, 3.124) -- (5.1, 3.16);
-  
-  % Legend
-  \draw[red!70!black, thick, dashed] (0.3,3.9) -- (0.9,3.9);
-  \node[right,font=\tiny] at (0.9,3.9) {Unsupervised};
-  \draw[blue!70!black, thick] (2.3,3.9) -- (2.9,3.9);
-  \node[right,font=\tiny] at (2.9,3.9) {Fixed-5};
-  \draw[green!60!black, thick, dash dot] (3.8,3.9) -- (4.4,3.9);
-  \node[right,font=\tiny] at (4.4,3.9) {Adaptive};
-\end{scope}
+    (0.30, 3.808) -- (0.90, 3.804) -- (1.50, 3.852) -- (2.10, 3.800) --
+    (2.70, 3.780) -- (3.30, 3.784) -- (4.20, 3.788) -- (5.25, 3.820);
+  \foreach \x/\y in {0.30/3.808, 0.90/3.804, 1.50/3.852, 2.10/3.800,
+                      2.70/3.780, 3.30/3.784, 4.20/3.788, 5.25/3.820}{
+    \fill[blue!70!black] (\x,\y) circle (1.5pt);
+  }
+
+  % --- Adaptive (green dash-dot) ---
+  \draw[green!55!black, thick, dash dot]
+    (0.30, 3.340) -- (0.90, 3.312) -- (1.50, 3.200) -- (2.10, 3.252) --
+    (2.70, 3.200) -- (3.30, 3.104) -- (4.20, 3.124) -- (5.25, 3.160);
+  \foreach \x/\y in {0.30/3.340, 0.90/3.312, 1.50/3.200, 2.10/3.252,
+                      2.70/3.200, 3.30/3.104, 4.20/3.124, 5.25/3.160}{
+    \fill[green!55!black] (\x,\y) circle (1.5pt);
+  }
+
+  % === Legend (bottom-left, away from all data lines) ===
+  \draw[red!75!black, thick, dashed]  (0.2, 1.75) -- (0.75, 1.75);
+  \fill[red!75!black] (0.475,1.75) circle (1.5pt);
+  \node[right, font=\tiny] at (0.75, 1.75) {Unsupervised (None)};
+
+  \draw[blue!70!black, thick]         (0.2, 1.42) -- (0.75, 1.42);
+  \fill[blue!70!black] (0.475,1.42) circle (1.5pt);
+  \node[right, font=\tiny] at (0.75, 1.42) {Fixed-5 Checkpoint};
+
+  \draw[green!55!black, thick, dash dot] (0.2, 1.09) -- (0.75, 1.09);
+  \fill[green!55!black] (0.475,1.09) circle (1.5pt);
+  \node[right, font=\tiny] at (0.75, 1.09) {Adaptive (Proposed)};
+
+  % Legend box
+  \draw[gray!60, thin, rounded corners=2pt] (0.12, 0.88) rectangle (2.68, 1.98);
 \end{tikzpicture}
-\caption{Task success rate vs.\ chain length $n$ across 24,000 simulated trajectories. Unsupervised autonomy collapses to 8.5\% at $n=50$; adaptive risk-sensitive checkpointing maintains 79\% success while reducing irreversible errors by 6$\times$.}
+\caption{Task success rate vs.\ chain length $ across 24{,}000 simulated trajectories
+(1{,}000 trials per configuration). Unsupervised autonomy collapses to 8.5\% at =50$;
+proposed adaptive risk-sensitive checkpointing maintains 79\% success while reducing
+irreversible mutations by 6$\times$ over the unsupervised baseline.}
 \label{fig:trajectory_collapse}
 \end{figure}
 
