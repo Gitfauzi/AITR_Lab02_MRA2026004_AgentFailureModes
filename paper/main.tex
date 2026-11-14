@@ -10,19 +10,16 @@
 \usepackage{xcolor}
 \usepackage{booktabs}
 \usepackage{array}
-\usepackage{url}
-\usepackage{hyperref}
 \usepackage{multirow}
 \usepackage{microtype}
+\usepackage{url}
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, fit}
-\hypersetup{
-  colorlinks=true,
+\usepackage[colorlinks=true,
   linkcolor=blue!60!black,
   citecolor=blue!60!black,
   urlcolor=blue!70!black,
-  pdfborder={0 0 0}
-}
+  pdfborder={0 0 0}]{hyperref}
 
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -70,13 +67,13 @@ Recent research has aggressively extended this paradigm toward long-horizon, aut
     warnarrow/.style={-{Stealth[scale=0.85]}, thick, draw=red!70!black}
 ]
   % --- Top row: left to right ---
-  \node[box] (goal)   {User Goal /\\ Intent $};
+  \node[box] (goal)   {User Goal /\\ Intent $g$};
   \node[box, right=of goal]   (plan)   {Planning \&\\ Decomposition};
-  \node[box, right=of plan]   (select) {Tool \& Arg\\ Gen.\ ($)};
+  \node[box, right=of plan]   (select) {Tool \& Arg\\ Gen.\ $a_t$};
   % --- Bottom row: right to left (mirror of top) ---
-  \node[actionbox, below=of select] (exec)  {External Tool\\ Execution ($)};
-  \node[actionbox, below=of plan]   (obs)   {Observation /\\ Result ({t+1}$)};
-  \node[box,       below=of goal]   (state) {State \& Context\\ Update ({t+1}$)};
+  \node[actionbox, below=of select] (exec)  {External Tool\\ Execution $a_t$};
+  \node[actionbox, below=of plan]   (obs)   {Observation /\\ Result $o_{t+1}$};
+  \node[box,       below=of goal]   (state) {State \& Context\\ Update $s_{t+1}$};
   % --- Error warning box ---
   \node[warnbox, below=0.55cm of obs] (err)
     {Corrupted Obs.\ / Latent Error\\
@@ -98,8 +95,8 @@ Recent research has aggressively extended this paradigm toward long-horizon, aut
   \draw[warnarrow] (err.west)   -| (state.south);
 \end{tikzpicture}
 \caption{Chained tool-calling agent execution loop (clockwise). Without a human
-checkpoint, a corrupted or adversarial observation {t+1}$ (red path) is absorbed
-into state {t+1}$ and re-enters planning, initiating an uncorrected failure cascade.}
+checkpoint, a corrupted or adversarial observation $o_{t+1}$ (red path) is absorbed
+into state $s_{t+1}$ and re-enters planning, initiating an uncorrected failure cascade.}
 \label{fig:workflow}
 \end{figure}
 
@@ -425,7 +422,7 @@ As recorded in Table~\ref{tab:empirical_results}:
 \begin{tikzpicture}
   % === Axes ===
   \draw[thick,->] (0,0) -- (5.8,0)
-    node[right, font=\scriptsize] {Chain Length $};
+    node[right, font=\scriptsize] {Chain Length $n$};
   \draw[thick,->] (0,0) -- (0,4.5)
     node[above, font=\scriptsize] {Task Success Rate (\%)};
 
@@ -491,8 +488,8 @@ As recorded in Table~\ref{tab:empirical_results}:
   % Legend box
   \draw[gray!60, thin, rounded corners=2pt] (0.12, 0.88) rectangle (2.68, 1.98);
 \end{tikzpicture}
-\caption{Task success rate vs.\ chain length $ across 24{,}000 simulated trajectories
-(1{,}000 trials per configuration). Unsupervised autonomy collapses to 8.5\% at =50$;
+\caption{Task success rate vs.\ chain length $n$ across 24{,}000 simulated trajectories
+(1{,}000 trials per configuration). Unsupervised autonomy collapses to 8.5\% at $n=50$;
 proposed adaptive risk-sensitive checkpointing maintains 79\% success while reducing
 irreversible mutations by 6$\times$ over the unsupervised baseline.}
 \label{fig:trajectory_collapse}
