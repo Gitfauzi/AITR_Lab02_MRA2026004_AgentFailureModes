@@ -1,0 +1,15 @@
+# Python standard library only — no external dependencies required
+# This project uses Python 3.x stdlib exclusively for zero-dependency reproducibility.
+# math
+# random
+# csv
+# os
+# sys
+# re
+# typing
+
+# Optional: for Jupyter notebook analysis only
+# jupyter>=1.0.0
+# matplotlib>=3.7.0
+# pandas>=2.0.0
+# numpy>=1.24.0

@@ -1,0 +1,39 @@
+experiment_config:
+  # Base simulation parameters
+  base_step_accuracy: 0.95       # p_base: per-step success probability
+  autocorrelation_penalty: 0.40  # Reduction in p when state has diverged
+  irreversible_tool_ratio: 0.20  # Fraction of tools that are irreversible/destructive
+  random_seed: 42                # Fixed for reproducibility
+
+  # Risk score weights: R_t = sigmoid(alpha*U + beta*I + gamma*P + delta*C - bias)
+  risk_weights:
+    alpha: 1.5    # Epistemic uncertainty weight
+    beta: 2.5     # Irreversibility weight (highest — most critical factor)
+    gamma: 2.0    # Privilege level weight
+    delta: 2.0    # Downstream consequence weight
+    bias: 4.0     # Centering bias (shifts threshold to operational range)
+
+  # Checkpoint thresholds
+  thresholds:
+    tau_auto: 0.40          # Below this: fully autonomous execution
+    tau_escalate: 0.70      # Above this: human checkpoint triggered
+
+  # Experiment sweep
+  chain_lengths: [5, 10, 15, 20, 25, 30, 40, 50]
+  control_modes: ["none", "fixed_5", "adaptive"]
+  trials_per_config: 1000
+
+  # Fixed-5 mode
+  fixed_checkpoint_interval: 5
+
+output:
+  results_dir: "results/"
+  csv_filename: "trajectory_metrics.csv"
+  columns:
+    - chain_length
+    - mode
+    - trials
+    - task_success_rate
+    - divergence_rate
+    - avg_irreversible_errors
+    - avg_human_interventions
